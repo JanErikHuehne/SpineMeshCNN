@@ -15,26 +15,28 @@ class MyMeshPool(nn.Module):
         formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.ERROR)
         
     def forward(self, edge_features, meshes, i):
+        """
+        So the problem is that edge_featues and mesh.edges do not have the same size since edge_features is zero padded
+        """
         edge_features = edge_features.squeeze(-1).clone()
         B, F, N = edge_features.shape
         updated_meshes = []
         updated_features = []
-        for mesh in meshes:
-            print(len(mesh.edges))
+      
         for b in range(B):
-         
             features = edge_features[b, :, :]  # (F, N)
-            print("Features shape ", features.shape)
             mesh = meshes[b]
-            mesh.x = features.T.contiguous() 
-            heap = self.build_heap(features, mesh.edges_count)
+            features = features[:, :len(mesh.edges)]
+            true_edge_count = len(mesh.edges)
+            mesh.x = features.T.contiguous()
+            heap = self.build_heap(mesh.x.T, mesh.edges_count)
             valid_edge_mask = torch.any(mesh.x != 0, dim=1)  # shape: (n_edges,)
             num_valid_edges = valid_edge_mask.sum().item()
             mesh.edge_count = num_valid_edges
-            self.pruned_edges = torch.ones(len(features), dtype=torch.bool)
+            self.pruned_edges = torch.ones(true_edge_count, dtype=torch.bool)
 
             while mesh.edges_count > (num_valid_edges * self.target_edge_ratio):
                 try:
@@ -51,7 +53,6 @@ class MyMeshPool(nn.Module):
                
                 updated_features.append(features[:, self.pruned_edges])
             except Exception:
-
                 print(len(mesh.edges),features.shape, self.pruned_edges.shape)
                 raise Exception()
         self.export_mesh_to_stl(*self.reconstruct_faces(mesh), f'{i}.stl')
