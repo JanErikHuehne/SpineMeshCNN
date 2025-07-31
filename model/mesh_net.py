@@ -93,13 +93,13 @@ class MeshConvNet(nn.Module):
             pool_block = getattr(self, f'pool{i + 1}')
             print(f'MeshResBlock Called with {list(x.shape)}')
             x, meshes = res_block(x, meshes)   
-            print(f'MeshResBlock Returning with {list(x.shape)}')
-            for i,mesh in enumerate(meshes):
-                print(i, len(mesh.edges))
+            #print(f'MeshResBlock Returning with {list(x.shape)}')
+            #for i,mesh in enumerate(meshes):
+                #print(i, len(mesh.edges))
             x, meshes = pool_block(x, meshes, i)  # MyMeshPool expects (B, C, N, 1)
-            print(f'Pruning Returning with {list(x.shape)}')
+            #print(f'Pruning Returning with {list(x.shape)}')
         x = torch.mean(x, dim=2)
-        print(f'Global Average {list(x.shape)}')
+        #print(f'Global Average {list(x.shape)}')
         x = self.ff1(x)
         x = F.relu(x)
         x = self.ff2(x)
